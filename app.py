@@ -129,8 +129,8 @@ with tab_classify:
                 "category":    st.column_config.TextColumn("Category", width="medium"),
                 "confidence":  st.column_config.ProgressColumn(
                     "Confidence",
-                    min_value=0.0,
-                    max_value=1.0,
+                    min_value=0,
+                    max_value=100,
                     format="%.0f%%",
                     width="small",
                 ),
@@ -149,7 +149,135 @@ with tab_classify:
 # ── Review Queue tab ──────────────────────────────────────────────────────────
 with tab_review:
     st.header("Review Queue")
-    st.info("Coming soon — low-confidence and error rows will appear here for manual review.")
+
+    if "results" not in st.session_state:
+        st.info("Run a classification on the Classify tab first.")
+    else:
+        results_df = st.session_state["results"]
+
+        threshold = st.slider(
+            "Confidence threshold — lines below this are sent to review",
+            min_value=0.0, max_value=1.0, value=0.75, step=0.01,
+            format="%.2f",
+        )
+
+        # Partition rows
+        is_error = results_df["category"] == "error"
+        is_low   = results_df["confidence"] < threshold
+        mask_queue = is_error | is_low
+
+        df_queue = results_df[mask_queue].copy()
+        df_auto  = results_df[~mask_queue].copy()
+
+        # Initialise reviews dict (line_id → {final_category, human_reviewed})
+        # Only add rows not yet tracked; don't reset existing decisions.
+        if "reviews" not in st.session_state:
+            st.session_state["reviews"] = {}
+        reviews = st.session_state["reviews"]
+
+        for _, row in results_df.iterrows():
+            lid = row["line_id"]
+            if lid not in reviews:
+                reviews[lid] = {
+                    "final_category": row["category"],
+                    "human_reviewed": False,
+                }
+
+        # Counts
+        n_auto     = len(df_auto)
+        n_queue    = len(df_queue)
+        n_reviewed = sum(
+            1 for lid in df_queue["line_id"]
+            if reviews.get(lid, {}).get("human_reviewed")
+        )
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Auto-accepted", n_auto)
+        m2.metric("Sent to review", n_queue)
+        m3.metric("Reviewed", f"{n_reviewed} / {n_queue}")
+
+        st.divider()
+
+        if df_queue.empty:
+            st.success("All lines are above the threshold — nothing to review.")
+        else:
+            from classifier import CATEGORIES  # already imported at module level but safe to re-reference
+
+            for _, row in df_queue.iterrows():
+                lid       = row["line_id"]
+                review    = reviews[lid]
+                reviewed  = review["human_reviewed"]
+
+                with st.container():
+                    # Header row: PO id + supplier + amount
+                    h1, h2 = st.columns([5, 1])
+                    with h1:
+                        st.markdown(
+                            f"**{lid}** &nbsp;·&nbsp; {row['supplier']} &nbsp;·&nbsp; "
+                            f"_{row['description']}_"
+                        )
+                    with h2:
+                        st.markdown(f"**${row['amount_usd']:,.2f}**")
+
+                    # AI prediction row
+                    conf_pct = int(round(row["confidence"] * 100))
+                    conf_color = (
+                        "🟢" if row["confidence"] >= 0.75
+                        else "🟡" if row["confidence"] >= 0.50
+                        else "🔴"
+                    )
+                    st.caption(
+                        f"AI: **{row['category']}** &nbsp; {conf_color} {conf_pct}% confidence &nbsp;·&nbsp; {row['reason']}"
+                    )
+
+                    if reviewed:
+                        rc1, rc2 = st.columns([5, 1])
+                        with rc1:
+                            st.success(
+                                f"✓ Reviewed — final category: **{review['final_category']}**",
+                                icon="✅",
+                            )
+                        with rc2:
+                            if st.button("Undo", key=f"undo_{lid}"):
+                                reviews[lid]["human_reviewed"] = False
+                                st.rerun()
+                    else:
+                        a1, a2, a3 = st.columns([1, 2, 3])
+
+                        with a1:
+                            if st.button("Approve AI category", key=f"approve_{lid}"):
+                                reviews[lid] = {
+                                    "final_category": row["category"],
+                                    "human_reviewed": True,
+                                }
+                                st.rerun()
+
+                        with a2:
+                            # Initialise the selectbox state once; never pass
+                            # index= after that, or Streamlit resets the value
+                            # on every rerun (the Save bug).
+                            sel_key = f"sel_{lid}"
+                            if sel_key not in st.session_state:
+                                ai_cat = row["category"]
+                                st.session_state[sel_key] = (
+                                    ai_cat if ai_cat in CATEGORIES else CATEGORIES[0]
+                                )
+                            st.selectbox(
+                                "Override category",
+                                options=CATEGORIES,
+                                key=sel_key,
+                                label_visibility="collapsed",
+                            )
+
+                        with a3:
+                            if st.button("Save override", key=f"override_{lid}"):
+                                reviews[lid] = {
+                                    "final_category": st.session_state[f"sel_{lid}"],
+                                    "human_reviewed": True,
+                                }
+                                st.rerun()
+
+                    st.divider()
 
 # ── Results tab ───────────────────────────────────────────────────────────────
 with tab_results:
