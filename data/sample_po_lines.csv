@@ -1,0 +1,75 @@
+line_id,supplier,description,amount_usd
+PO-1001,Northfield Bearing Supply,6205-2RS deep groove brg qty 400,3840.00
+PO-1002,Granite Castings Co,"Pump housing casting PH-220 rough, qty 150",28650.00
+PO-1003,Delta Steel Service,304 SS sheet 12ga 48x96 - 60 sheets,11220.00
+PO-1004,Precision Seal Works,"Mech seal assy MS-35 for pump line, qty 500",17500.00
+PO-1005,Ridgeline Motors Inc,7.5HP TEFC motor 213T frame qty 40,30360.00
+PO-1006,Apex Fastener Dist,"Hex bolt M12x50 gr 8.8 zinc - 20,000 pcs",2900.00
+PO-1007,Coastal Polymer Supply,"Nitrile O-ring kit compressor valve qty 2,500",4125.00
+PO-1008,Summit Electrical Comp,Pressure switch PS-150 OEM build qty 300,9600.00
+PO-1009,Granite Castings Co,Impeller bronze IMP-8 machined qty 200,22400.00
+PO-1010,Delta Steel Service,"Carbon steel bar stock 1045 2in rd - 3,000 lb",4410.00
+PO-1011,Ironwood Paint & Coating,Powder coat RAL 5010 for compressor enclosures 800 lb,6240.00
+PO-1012,Ridgeline Motors Inc,VFD 10HP 480V for packaged unit build qty 25,21875.00
+PO-1013,Precision Seal Works,"Gasket kit GK-12 compressor head, prod qty 1,000",5300.00
+PO-1014,Northfield Bearing Supply,Tapered roller brg 32210 qty 250 - production,6875.00
+PO-1015,Industrial Tool Depot,Replacement drill bits cobalt asst - maint crib,412.50
+PO-1016,Lakeside Lift Services,Q3 forklift maint svc - 6 units,2850.00
+PO-1017,Industrial Tool Depot,"Shop rags, nitrile gloves, safety glasses - bulk",968.20
+PO-1018,Brightline Lubricants,Hydraulic oil ISO 46 - 4 drums plant use,2140.00
+PO-1019,Summit Electrical Comp,Replacement contactor for CNC lathe #4,386.00
+PO-1020,Ironwood Paint & Coating,Floor marking tape yellow 3in - 40 rolls,720.00
+PO-1021,Precision Machine Repair,Emergency spindle rebuild Haas VF-2 cell 3,7850.00
+PO-1022,Northfield Bearing Supply,Bearings for conveyor repair - maint dept qty 12,264.00
+PO-1023,Brightline Lubricants,Way oil + coolant concentrate machine shop,1310.00
+PO-1024,Industrial Tool Depot,Torque wrench calibration - 14 tools,980.00
+PO-1025,Lakeside Lift Services,Overhead crane annual inspection bay 2,1650.00
+PO-1026,Apex Fastener Dist,Misc fasteners maint crib restock,340.75
+PO-1027,Crossroads Freight LLC,LTL freight Dallas to Davidson NC - 6 pallets,1185.00
+PO-1028,Bluewater Ocean Lines,Ocean freight 40ft container inbound castings,6900.00
+PO-1029,Crossroads Freight LLC,Expedited truckload - customer order 44821,4250.00
+PO-1030,Swift Parcel Express,Small parcel shipping Oct - acct 7781,3612.48
+PO-1031,Harborgate Customs Brokerage,Customs brokerage fee entry #A93-22,450.00
+PO-1032,Bluewater Ocean Lines,Demurrage charges container MSKU-xx,1320.00
+PO-1033,Granite Castings Co,Freight charge on PH-220 housing order,890.00
+PO-1034,Swift Parcel Express,Overnight samples to customer,146.90
+PO-1035,Prairie Warehousing,3PL storage overflow - Oct pallets,5400.00
+PO-1036,Crossroads Freight LLC,Fuel surcharge Q3,612.00
+PO-1037,Cloudline Software,Annual license CAD seats x10 renewal,18500.00
+PO-1038,Metro Tech Solutions,Dell laptops x8 new hires engineering,9840.00
+PO-1039,Cloudline Software,Data warehouse compute credits - Nov,4200.00
+PO-1040,Metro Tech Solutions,Laptop screen repair svc - 3 units,540.00
+PO-1041,Pinnacle Networks,Firewall support contract renewal 12 mo,6750.00
+PO-1042,Cloudline Software,SaaS e-signature subscription annual,2400.00
+PO-1043,Metro Tech Solutions,Monitors 27in x12 + docking stations,4380.00
+PO-1044,Pinnacle Networks,Network switch replacement plant floor,3150.00
+PO-1045,Cloudline Software,ERP user licenses add-on x15,7500.00
+PO-1046,Metro Tech Solutions,Barcode scanners warehouse x6,2214.00
+PO-1047,Harbor & Lane Consulting,Procurement process assessment - phase 1,24000.00
+PO-1048,Westbrook Legal LLP,Contract review - supplier MSA,3750.00
+PO-1049,Keystone Staffing,Temp labor - assembly line wk 44,6820.00
+PO-1050,Harbor & Lane Consulting,ERP configuration consulting - 40 hrs,7200.00
+PO-1051,Clearview Audit Partners,ISO 9001 surveillance audit fee,4100.00
+PO-1052,Northpoint Training Co,Lean six sigma green belt training x4,7600.00
+PO-1053,Westbrook Legal LLP,Trade compliance advisory - tariff classification,5200.00
+PO-1054,Keystone Staffing,Contract recruiter fee - maint technician hire,5500.00
+PO-1055,Brightpath Translation,Translation of operating manuals - Spanish,1850.00
+PO-1056,Clearview Audit Partners,Environmental compliance consulting,3300.00
+PO-1057,Evergreen Janitorial,Office + plant cleaning svc - Oct,4200.00
+PO-1058,North Texas Power & Light,Electricity - plant main meter Oct,18650.00
+PO-1059,Shieldline Security,Security guard services - Oct,5600.00
+PO-1060,Comfort Air Mechanical,HVAC PM service office building,1450.00
+PO-1061,Greenscape Grounds,Landscaping + snow removal contract,950.00
+PO-1062,Waste Solutions Inc,Dumpster pickup + recycling - Oct,1120.00
+PO-1063,Comfort Air Mechanical,Roof leak repair admin building,2780.00
+PO-1064,City Water Utility,Water/sewer - plant Oct,2310.00
+PO-1065,Officeworks Supply,Breakroom coffee + office supplies,388.60
+PO-1066,Shieldline Security,Badge access system maint - main entrance,1240.00
+PO-1067,Metro Tech Solutions,Misc charges - see attached,612.00
+PO-1068,Industrial Tool Depot,Order #55821,1094.30
+PO-1069,Harbor & Lane Consulting,Phase 2,18000.00
+PO-1070,Crossroads Freight LLC,Adjustment,-120.00
+PO-1071,Officeworks Supply,Supplies,245.10
+PO-1072,Delta Steel Service,Rush cutting fee + material,1640.00
+PO-1073,Granite Castings Co,Pattern repair for PH-220 casting tooling,3200.00
+PO-1074,Summit Electrical Comp,"Wire, terminals, heat shrink - asst",715.40

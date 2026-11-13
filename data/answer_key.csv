@@ -1,0 +1,75 @@
+line_id,correct_category,note
+PO-1001,Direct Materials,
+PO-1002,Direct Materials,
+PO-1003,Direct Materials,
+PO-1004,Direct Materials,
+PO-1005,Direct Materials,
+PO-1006,Direct Materials,
+PO-1007,Direct Materials,
+PO-1008,Direct Materials,
+PO-1009,Direct Materials,
+PO-1010,Direct Materials,
+PO-1011,Direct Materials,
+PO-1012,Direct Materials,
+PO-1013,Direct Materials,
+PO-1014,Direct Materials,
+PO-1015,MRO,
+PO-1016,MRO,
+PO-1017,MRO,
+PO-1018,MRO,
+PO-1019,MRO,
+PO-1020,MRO,
+PO-1021,MRO,
+PO-1022,MRO,"Same supplier as production bearings; this is plant upkeep, not product build"
+PO-1023,MRO,
+PO-1024,MRO,
+PO-1025,MRO,
+PO-1026,MRO,
+PO-1027,Logistics & Freight,
+PO-1028,Logistics & Freight,
+PO-1029,Logistics & Freight,
+PO-1030,Logistics & Freight,
+PO-1031,Logistics & Freight,"Broker is a service provider, but the spend is part of moving goods"
+PO-1032,Logistics & Freight,
+PO-1033,Logistics & Freight,"Supplier is a materials vendor, but this line is a freight charge"
+PO-1034,Logistics & Freight,
+PO-1035,Logistics & Freight,
+PO-1036,Logistics & Freight,
+PO-1037,IT & Software,
+PO-1038,IT & Software,
+PO-1039,IT & Software,
+PO-1040,IT & Software,"Repair wording looks like MRO, but it's IT equipment"
+PO-1041,IT & Software,
+PO-1042,IT & Software,
+PO-1043,IT & Software,
+PO-1044,IT & Software,
+PO-1045,IT & Software,
+PO-1046,IT & Software,"Used in the warehouse, but it's IT hardware"
+PO-1047,Professional Services,
+PO-1048,Professional Services,
+PO-1049,Professional Services,Temp labor on the line; treated as a purchased service
+PO-1050,Professional Services,"Mentions ERP, but it's paid consulting hours"
+PO-1051,Professional Services,
+PO-1052,Professional Services,
+PO-1053,Professional Services,"Mentions tariffs, but it's legal advisory"
+PO-1054,Professional Services,
+PO-1055,Professional Services,
+PO-1056,Professional Services,
+PO-1057,Facilities,
+PO-1058,Facilities,
+PO-1059,Facilities,
+PO-1060,Facilities,"HVAC upkeep for the building, not production equipment"
+PO-1061,Facilities,
+PO-1062,Facilities,
+PO-1063,Facilities,"Repair wording looks like MRO, but it's the building"
+PO-1064,Facilities,
+PO-1065,Facilities,
+PO-1066,Facilities,Could look like IT; treated as building security
+PO-1067,IT & Software,Very little information; supplier is the only clue
+PO-1068,MRO,No description; supplier is the only clue
+PO-1069,Professional Services,No description; supplier is the only clue
+PO-1070,Logistics & Freight,Credit/adjustment with no detail
+PO-1071,Facilities,Generic description
+PO-1072,Direct Materials,Mixed service + material on one line
+PO-1073,MRO,Tooling upkeep; reasonable people could call this Direct Materials
+PO-1074,MRO,Could be production or maintenance; no context given
