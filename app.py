@@ -1,9 +1,13 @@
-import io
+import os
 import pandas as pd
 import streamlit as st
 
-from classifier import classify_line
-from config import HAIKU_MODEL, SONNET_MODEL
+from classifier import classify_line, CATEGORIES
+from config import (
+    HAIKU_MODEL, SONNET_MODEL,
+    HAIKU_INPUT_PRICE_PER_M, HAIKU_OUTPUT_PRICE_PER_M,
+    SONNET_INPUT_PRICE_PER_M, SONNET_OUTPUT_PRICE_PER_M,
+)
 
 st.set_page_config(page_title="Spend Classifier", layout="wide")
 
@@ -158,7 +162,7 @@ with tab_review:
         threshold = st.slider(
             "Confidence threshold — lines below this are sent to review",
             min_value=0.0, max_value=1.0, value=0.75, step=0.01,
-            format="%.2f",
+            format="%.2f", key="threshold",
         )
 
         # Partition rows
@@ -201,8 +205,6 @@ with tab_review:
         if df_queue.empty:
             st.success("All lines are above the threshold — nothing to review.")
         else:
-            from classifier import CATEGORIES  # already imported at module level but safe to re-reference
-
             for _, row in df_queue.iterrows():
                 lid       = row["line_id"]
                 review    = reviews[lid]
@@ -282,4 +284,160 @@ with tab_review:
 # ── Results tab ───────────────────────────────────────────────────────────────
 with tab_results:
     st.header("Results")
-    st.info("Coming soon — accuracy scoring against the answer key will appear here.")
+
+    ANSWER_KEY_PATH = "data/answer_key.csv"
+    _MODEL_META = {
+        HAIKU_MODEL:  ("Haiku",  HAIKU_INPUT_PRICE_PER_M,  HAIKU_OUTPUT_PRICE_PER_M),
+        SONNET_MODEL: ("Sonnet", SONNET_INPUT_PRICE_PER_M, SONNET_OUTPUT_PRICE_PER_M),
+    }
+
+    if not os.path.exists(ANSWER_KEY_PATH):
+        st.info("No answer key found at data/answer_key.csv — accuracy scoring unavailable.")
+    elif "results" not in st.session_state:
+        st.info("Run a classification on the Classify tab first.")
+    else:
+        results_df = st.session_state["results"]
+        reviews    = st.session_state.get("reviews", {})
+        threshold  = st.session_state.get("threshold", 0.75)
+        answer_key = pd.read_csv(ANSWER_KEY_PATH)
+
+        # Merge AI results with answer key; skip unmatched lines
+        merged = results_df.merge(answer_key[["line_id", "correct_category"]], on="line_id", how="inner")
+
+        # Attach final (post-review) category
+        merged["final_category"] = merged.apply(
+            lambda r: reviews.get(r["line_id"], {}).get("final_category", r["category"]),
+            axis=1,
+        )
+
+        # Score only non-error rows
+        scored = merged[merged["category"] != "error"].copy()
+        n = len(scored)
+
+        # ── 1. Overall accuracy ───────────────────────────────────────────────
+        st.subheader("Overall accuracy")
+
+        ai_acc     = (scored["category"]       == scored["correct_category"]).mean() if n else 0
+        review_acc = (scored["final_category"] == scored["correct_category"]).mean() if n else 0
+        ai_n     = int((scored["category"]       == scored["correct_category"]).sum())
+        review_n = int((scored["final_category"] == scored["correct_category"]).sum())
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("AI alone",     f"{ai_acc:.1%}",     f"{ai_n} / {n} correct")
+        c2.metric("After review", f"{review_acc:.1%}", f"{review_n} / {n} correct")
+        c3.metric("Confidence threshold used", f"{threshold:.0%}")
+
+        # ── 2. Accuracy above vs below threshold ─────────────────────────────
+        st.subheader("Accuracy by confidence band")
+
+        above = scored[scored["confidence"] >= threshold]
+        below = scored[scored["confidence"] <  threshold]
+
+        def _band_row(label, df):
+            if df.empty:
+                return {"Band": label, "Lines": 0, "AI correct": 0, "AI accuracy": "—",
+                        "After review": 0, "Review accuracy": "—"}
+            ai_ok  = (df["category"]       == df["correct_category"]).sum()
+            rev_ok = (df["final_category"] == df["correct_category"]).sum()
+            return {
+                "Band":             label,
+                "Lines":            len(df),
+                "AI correct":       int(ai_ok),
+                "AI accuracy":      f"{ai_ok / len(df):.0%}",
+                "After review":     int(rev_ok),
+                "Review accuracy":  f"{rev_ok / len(df):.0%}",
+            }
+
+        band_df = pd.DataFrame([
+            _band_row(f"Above {threshold:.0%}", above),
+            _band_row(f"Below {threshold:.0%}", below),
+        ])
+        st.dataframe(band_df, hide_index=True, use_container_width=True)
+
+        # ── 3. Confusion matrix ───────────────────────────────────────────────
+        st.subheader("Confusion matrix — AI predictions")
+        st.caption("Rows = correct category · Columns = AI predicted · Diagonal = correct")
+
+        cm = pd.crosstab(
+            scored["correct_category"],
+            scored["category"],
+        )
+        cm = cm.reindex(index=CATEGORIES, columns=CATEGORIES, fill_value=0)
+        cm.index.name   = "Correct ↓ / Predicted →"
+        cm.columns.name = None
+
+        # Shorten labels so columns aren't squeezed
+        short = {
+            "Direct Materials":    "Direct Mat.",
+            "MRO":                 "MRO",
+            "Logistics & Freight": "Logistics",
+            "IT & Software":       "IT & SW",
+            "Professional Services": "Prof. Svcs",
+            "Facilities":          "Facilities",
+        }
+        cm_display = cm.copy()
+        cm_display.columns = [short.get(c, c) for c in cm_display.columns]
+        cm_display.index   = [short.get(i, i) for i in cm_display.index]
+
+        def _style_cm(df):
+            """Green bold for diagonal (correct); light red for non-zero errors."""
+            out = pd.DataFrame("", index=df.index, columns=df.columns)
+            for i in range(len(df.index)):
+                for j in range(len(df.columns)):
+                    if i == j:
+                        out.iloc[i, j] = "background-color: #d4edda; font-weight: bold"
+                    elif df.iloc[i, j] > 0:
+                        out.iloc[i, j] = "background-color: #fce8e8"
+            return out
+
+        st.dataframe(
+            cm_display.style.apply(_style_cm, axis=None).format("{:d}"),
+            width="stretch",
+        )
+
+        # ── 4. Model comparison ───────────────────────────────────────────────
+        st.subheader("Model comparison")
+
+        model_slug = {m: m.replace("/", "-") for m in _MODEL_META}
+        saved = {
+            m: pd.read_csv(f"results/{model_slug[m]}.csv")
+            for m in _MODEL_META
+            if os.path.exists(f"results/{model_slug[m]}.csv")
+        }
+
+        if len(saved) < 2:
+            missing_names = [_MODEL_META[m][0] for m in _MODEL_META if m not in saved]
+            st.info(
+                f"Run the batch script for **{', '.join(missing_names)}** "
+                f"to enable side-by-side comparison."
+            )
+        else:
+            comp_cols = st.columns(len(saved))
+            for col, (model_id, df_saved) in zip(comp_cols, saved.items()):
+                label, price_in, price_out = _MODEL_META[model_id]
+
+                # Accuracy
+                df_m = df_saved.merge(
+                    answer_key[["line_id", "correct_category"]], on="line_id", how="inner"
+                )
+                df_m_scored = df_m[df_m["predicted_category"] != "error"]
+                acc = (df_m_scored["predicted_category"] == df_m_scored["correct_category"]).mean()
+
+                # Cost
+                total_cost = (
+                    df_saved["input_tokens"].sum()  * price_in +
+                    df_saved["output_tokens"].sum() * price_out
+                ) / 1_000_000
+
+                # Avg latency
+                avg_latency = df_saved["latency_seconds"].mean()
+
+                # Lines sent to review (below threshold)
+                n_review = (df_saved["confidence"] < threshold).sum()
+
+                col.markdown(f"### {label}")
+                col.metric("Accuracy",           f"{acc:.1%}")
+                col.metric("Total cost",         f"${total_cost:.4f}")
+                col.metric("Avg sec / line",     f"{avg_latency:.2f}s")
+                col.metric("Lines to review",    int(n_review),
+                           help=f"Confidence < {threshold:.0%}")
