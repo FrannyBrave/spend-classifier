@@ -58,7 +58,30 @@ with tab_classify:
         st.error(f"CSV is missing required columns: {', '.join(sorted(missing))}")
         st.stop()
 
-    run_clicked = st.button("Run classification", type="primary")
+    btn_col1, btn_col2 = st.columns([2, 3])
+    run_clicked  = btn_col1.button("Run classification", type="primary")
+    load_clicked = btn_col2.button("Load saved results", help="Loads the saved batch CSV for the selected model from results/")
+
+    if load_clicked:
+        saved_path = f"results/{model_id.replace('/', '-')}.csv"
+        if not os.path.exists(saved_path):
+            st.error(f"No saved results found at `{saved_path}`. Run `python run_batch.py --model {'haiku' if model_id == HAIKU_MODEL else 'sonnet'}` first.")
+        else:
+            saved_df = pd.read_csv(saved_path)
+            # Align column names with what the Classify tab produces
+            saved_df = saved_df.rename(columns={
+                "predicted_category": "category",
+                "latency_seconds":    "latency_s",
+            })
+            # Merge in supplier/description/amount from the input CSV
+            saved_df = saved_df.merge(
+                df_input[["line_id", "supplier", "description", "amount_usd"]],
+                on="line_id", how="left",
+            )
+            saved_df["model"] = model_id
+            st.session_state["results"] = saved_df
+            st.session_state["results_model"] = model_label
+            st.success(f"Loaded {len(saved_df)} rows from `{saved_path}`.")
 
     if run_clicked:
         progress_bar = st.progress(0, text="Starting…")
@@ -128,7 +151,7 @@ with tab_classify:
                 "supplier":    st.column_config.TextColumn("Supplier", width="medium"),
                 "description": st.column_config.TextColumn("Description", width="large"),
                 "amount_usd":  st.column_config.NumberColumn(
-                    "Amount (USD)", format="$%.2f", width="medium"
+                    "Amount (USD)", format="$%.2f", width="small"
                 ),
                 "category":    st.column_config.TextColumn("Category", width="medium"),
                 "confidence":  st.column_config.ProgressColumn(
@@ -138,7 +161,7 @@ with tab_classify:
                     format="%.0f%%",
                     width="small",
                 ),
-                "reason":      st.column_config.TextColumn("Reason", width="large"),
+                "reason":      st.column_config.TextColumn("Reason", width="large", help="One-sentence explanation from the model"),
             },
         )
 
@@ -396,7 +419,7 @@ with tab_results:
         )
 
         # ── 4. Model comparison ───────────────────────────────────────────────
-        st.subheader("Model comparison")
+        st.subheader("Model comparison — from saved batch runs (results/ folder)")
 
         model_slug = {m: m.replace("/", "-") for m in _MODEL_META}
         saved = {
