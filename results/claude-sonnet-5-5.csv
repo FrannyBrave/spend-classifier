@@ -1,0 +1,75 @@
+line_id,predicted_category,confidence,reason,input_tokens,output_tokens,tokens,latency_seconds
+PO-1001,Direct Materials,0.7,"400 units of 6205-2RS deep groove bearings from a bearing supplier is a bulk quantity that most likely goes into production, though the line doesn't say whether it's for production or maintenance stock (MRO).",1354,168,1522,2.548
+PO-1002,Direct Materials,0.97,"Rough pump housing castings (PH-220, qty 150) are parts that go into the products being built and sold.",1353,133,1486,1.609
+PO-1003,Direct Materials,0.85,"304 stainless steel sheet stock from a steel service center is raw material most likely consumed in building products, though the description doesn't state its end use.",1358,143,1501,2.262
+PO-1004,Direct Materials,0.72,"Mechanical seal assemblies bought in bulk (qty 500) for a pump line are most likely components built into the product, though the description doesn't rule out use as maintenance spares.",1355,275,1630,3.011
+PO-1005,Direct Materials,0.7,"A bulk order of 40 new 7.5HP TEFC motors (~$759 each) most likely supplies motors built into packaged units, though some could be MRO spares.",1359,223,1582,2.866
+PO-1006,Direct Materials,0.7,"A bulk quantity of 20,000 M12x50 grade 8.8 zinc hex bolts looks like production fasteners that go into the product, though the line doesn't say whether they're for production or shop use.",1366,165,1531,2.272
+PO-1007,Direct Materials,0.55,"A bulk quantity (2,500) of nitrile O-ring seals at about $1.65 each points to production seals for compressor valves, but the word ""kit"" could mean shop compressor repair (MRO), so confidence is moderate.",1359,395,1754,3.925
+PO-1008,Direct Materials,0.85,Pressure switches purchased in OEM build quantity (300 units) are components that go into products being built and sold.,1355,133,1488,3.024
+PO-1009,Direct Materials,0.9,"Machined bronze impellers in quantity 200 from a castings supplier are components that go into the products being built, so they are Direct Materials.",1353,142,1495,2.009
+PO-1010,Direct Materials,0.93,"Carbon steel 1045 round bar stock is raw material that is machined into products being built and sold, so it is Direct Materials.",1360,140,1500,2.507
+PO-1011,Direct Materials,0.93,"Powder coat in a specific RAL color is applied to compressor enclosures that are part of the product being built, so it counts as a coating applied to the product.",1363,146,1509,2.22
+PO-1012,Direct Materials,0.85,"The 10HP 480V VFDs are bought in quantity 25 for a packaged unit build, so they go into the product being sold.",1359,140,1499,1.962
+PO-1013,Direct Materials,0.9,"Gasket kits for compressor heads in production quantity (1,000) are seal components that go into the products being built, so they are Direct Materials.",1358,143,1501,1.721
+PO-1014,Direct Materials,0.95,"Tapered roller bearings (qty 250) explicitly designated for production are components that go into the products being built, so they are Direct Materials.",1356,142,1498,2.554
+PO-1015,MRO,0.93,"Replacement cobalt drill bits for the maintenance crib are shop consumables/tooling that keep production equipment and the shop running, not material going into the product.",1354,146,1500,2.053
+PO-1016,MRO,0.96,"Quarterly maintenance service on six forklifts is upkeep of production/shop equipment, which falls under MRO.",1352,134,1486,1.732
+PO-1017,MRO,0.9,"Shop rags, nitrile gloves, and safety glasses are shop consumables that keep production operations running, not parts going into the product.",1358,138,1496,1.943
+PO-1018,MRO,0.93,"Hydraulic oil for plant use is a lubricant that keeps production equipment running, so it falls under MRO rather than going into the product.",1358,140,1498,2.017
+PO-1019,MRO,0.95,"A replacement contactor for a CNC lathe is a repair part that keeps production equipment running, not a component that goes into the product.",1351,136,1487,2.024
+PO-1020,MRO,0.7,"Floor marking tape is a shop consumable used to mark aisles and work areas in the plant rather than a material going into the product, though it could arguably be Facilities if used for general building areas.",1357,265,1622,3.14
+PO-1021,MRO,0.97,"A spindle rebuild on a Haas VF-2 CNC machine is a repair of production equipment, which falls under MRO.",1358,137,1495,2.024
+PO-1022,MRO,0.9,"Bearings are for repairing a conveyor by the maintenance department, which is production equipment upkeep rather than parts going into a product.",1356,138,1494,2.762
+PO-1023,MRO,0.93,"Way oil and coolant concentrate are lubricants and shop consumables that keep machine tools running, not materials that go into the product.",1351,137,1488,2.152
+PO-1024,MRO,0.95,"Tool calibration is explicitly an MRO example, since it keeps production tooling accurate and in service.",1350,129,1479,1.939
+PO-1025,MRO,0.92,"Annual inspection of an overhead crane is upkeep of production/shop equipment (crane service), which falls under MRO.",1351,135,1486,2.18
+PO-1026,MRO,0.9,"Misc fasteners for maintenance crib restock are shop upkeep supplies rather than parts going into the product, so MRO applies despite the fastener supplier.",1348,148,1496,2.117
+PO-1027,Logistics & Freight,0.98,LTL freight shipment of 6 pallets from Dallas to Davidson NC is a goods-movement charge.,1360,138,1498,1.967
+PO-1028,Logistics & Freight,0.97,"The line is an ocean freight charge for moving a 40ft container, so it is Logistics & Freight even though the cargo is castings (classify what was bought, not the goods carried).",1354,157,1511,2.025
+PO-1029,Logistics & Freight,0.98,Expedited truckload shipment for a customer order is a freight service for moving goods.,1351,127,1478,1.989
+PO-1030,Logistics & Freight,0.97,"Small parcel shipping charges for October are moving goods, which falls squarely under Logistics & Freight.",1352,135,1487,1.936
+PO-1031,Logistics & Freight,0.97,Customs brokerage fees relate to moving goods across borders and are explicitly classified under Logistics & Freight.,1354,138,1492,2.158
+PO-1032,Logistics & Freight,0.97,"Demurrage charges on a shipping container are a freight/logistics cost for holding goods in transit, which is explicitly listed under Logistics & Freight.",1353,151,1504,2.321
+PO-1033,Logistics & Freight,0.97,"The line is a freight charge, and freight is classified by what was bought (shipping) rather than by the castings supplier who billed it.",1347,141,1488,2.227
+PO-1034,Logistics & Freight,0.95,Overnight parcel shipping of samples to a customer is a shipping/freight service from a parcel carrier.,1343,136,1479,1.774
+PO-1035,Logistics & Freight,0.97,"3PL pallet storage overflow is a goods storage service, which falls under Logistics & Freight.",1351,133,1484,2.247
+PO-1036,Logistics & Freight,0.97,"A fuel surcharge from a freight carrier is a freight cost, which belongs in Logistics & Freight.",1347,137,1484,2.195
+PO-1037,IT & Software,0.96,"Annual renewal of 10 CAD software license seats is a software license purchase, which falls under IT & Software.",1348,133,1481,1.845
+PO-1038,IT & Software,0.98,"Dell laptops are technology hardware, which belongs in IT & Software regardless of the engineering team using them.",1351,133,1484,1.92
+PO-1039,IT & Software,0.97,"Data warehouse compute credits are cloud/data credits from a software supplier, which fall under IT & Software.",1347,133,1480,2.086
+PO-1040,IT & Software,0.96,"Laptop screen repair is IT equipment repair, which falls under IT & Software.",1350,125,1475,1.741
+PO-1041,IT & Software,0.96,"A 12-month firewall support contract renewal is technology support for network security equipment, which falls under IT & Software.",1350,133,1483,2.042
+PO-1042,IT & Software,0.97,"An annual SaaS e-signature subscription is a software license, which belongs in IT & Software.",1346,128,1474,2.15
+PO-1043,IT & Software,0.97,"27-inch monitors and docking stations are technology hardware, which belongs in IT & Software.",1351,128,1479,1.635
+PO-1044,IT & Software,0.96,"A network switch is IT hardware, and per the tie-breaker rules tech is IT & Software even when it is used on the plant floor.",1346,140,1486,2.345
+PO-1045,IT & Software,0.97,"ERP user licenses are software licenses, which belong in IT & Software.",1345,121,1466,1.361
+PO-1046,IT & Software,0.95,"Barcode scanners are technology hardware, and tie-breaker rule 4 says tech is IT & Software even when it is used in the warehouse.",1349,145,1494,1.819
+PO-1047,Professional Services,0.97,A procurement process assessment from a consulting firm is paid expertise bought as a consulting service.,1351,128,1479,2.193
+PO-1048,Professional Services,0.97,"Contract review of a supplier MSA by a law firm is a legal service, which is paid expertise.",1348,129,1477,2.318
+PO-1049,Professional Services,0.93,"Temporary staffing labor is purchased as a service, so it falls under Professional Services even though the workers are on the assembly line.",1348,138,1486,1.833
+PO-1050,IT & Software,0.6,"ERP configuration is technology implementation and IT support work, so it fits IT & Software, though the hourly consulting billing could also point to Professional Services.",1354,393,1747,3.885
+PO-1051,Professional Services,0.93,"An ISO 9001 surveillance audit fee pays for external auditing expertise, which is a paid professional service.",1351,134,1485,2.041
+PO-1052,Professional Services,0.96,"Lean six sigma green belt training for four people is a paid training service, which falls under Professional Services.",1348,129,1477,1.534
+PO-1053,Professional Services,0.93,Trade compliance advisory on tariff classification from a law firm is paid legal/consulting expertise purchased as a service.,1352,137,1489,1.533
+PO-1054,Professional Services,0.95,"A contract recruiter fee is a paid recruiting/staffing service, so it is Professional Services even though the hire is for a maintenance technician role.",1350,145,1495,1.437
+PO-1055,Professional Services,0.97,"Translation of manuals into Spanish is a paid language expertise service, which falls under Professional Services.",1348,130,1478,2.141
+PO-1056,Professional Services,0.93,"Environmental compliance consulting is paid expertise bought as a service, which fits Professional Services.",1346,129,1475,2.044
+PO-1057,Facilities,0.93,"Monthly janitorial cleaning of the office and plant is building upkeep, which falls under Facilities.",1351,131,1482,1.916
+PO-1058,Facilities,0.95,"Electricity billed on the plant main meter is a building utility, which belongs in Facilities.",1348,126,1474,3.716
+PO-1059,Facilities,0.95,"Security guard services protect the buildings and grounds, which falls under Facilities (security) rather than Professional Services labor.",1342,135,1477,3.274
+PO-1060,Facilities,0.96,"Preventive maintenance on HVAC for an office building is building upkeep, which falls under Facilities rather than production equipment MRO.",1346,140,1486,2.143
+PO-1061,Facilities,0.97,"Landscaping and snow removal are grounds maintenance services, which fall under Facilities.",1346,126,1472,1.464
+PO-1062,Facilities,0.95,"Dumpster pickup and recycling is waste removal service, which falls under Facilities (building and grounds operations).",1352,133,1485,2.015
+PO-1063,Facilities,0.95,"Roof leak repair on the admin building is building upkeep, which belongs in Facilities and not in production equipment MRO.",1347,136,1483,2.432
+PO-1064,Facilities,0.95,"Water/sewer service for the plant is a building utility, which belongs in Facilities.",1344,124,1468,2.042
+PO-1065,Facilities,0.97,"Breakroom coffee and office supplies are building/office operating supplies, which belong in Facilities.",1346,129,1475,2.278
+PO-1066,Facilities,0.62,"Maintenance of a building's main-entrance badge access system is physical security upkeep for the building, which fits Facilities, though it could be read as IT hardware support.",1345,258,1603,2.977
+PO-1067,IT & Software,0.25,"The description ""Misc charges - see attached"" gives no detail on what was bought, so this is a best guess from the supplier name (Metro Tech Solutions) suggesting IT-related goods or services.",1344,160,1504,2.206
+PO-1068,MRO,0.3,"The description is only an order number, so this is a guess from the supplier name: Industrial Tool Depot most likely sells shop tools and consumables, which are MRO.",1341,147,1488,2.823
+PO-1069,Professional Services,0.35,"The description ""Phase 2"" gives almost no detail, but the supplier is a consulting firm, so Professional Services is the most likely category.",1343,141,1484,2.227
+PO-1070,Logistics & Freight,0.3,"The description ""Adjustment"" is vague, so this is a guess from the supplier context: Crossroads Freight LLC is a freight carrier and the -$120 is most likely a credit on a freight charge.",1341,165,1506,2.163
+PO-1071,Facilities,0.3,"The description ""Supplies"" is vague, but an office-supply vendor most likely sold office or breakroom supplies, which fall under Facilities.",1337,142,1479,2.131
+PO-1072,Direct Materials,0.6,"A steel service center's rush cutting fee plus material most likely means steel stock cut to size for production, though the description doesn't confirm the end use.",1344,144,1488,2.293
+PO-1073,MRO,0.85,"Repairing casting patterns/tooling is upkeep of production tooling rather than material going into the product, so it falls under MRO despite the castings supplier.",1351,145,1496,2.248
+PO-1074,MRO,0.35,"An assorted mix of wire, terminals and heat shrink looks like shop or maintenance-crib consumables, but the description doesn't say whether it goes into the product (Direct Materials), so confidence is low.",1351,347,1698,3.132

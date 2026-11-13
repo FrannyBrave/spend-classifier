@@ -34,7 +34,9 @@ Classify each purchase-order line into exactly one of these six categories:
 4. Tech is IT, wherever it's used. IT hardware used in the warehouse or plant is still IT & Software.
 5. If the description gives too little to decide, pick the most likely category from the supplier context, give low confidence (0.0–0.4), and explain why in the reason field.
 
-Always pick a category — never refuse or return null. If information is thin, still pick the most likely category, set confidence low, and explain the uncertainty in one sentence."""
+Always pick a category — never refuse or return null. If information is thin, still pick the most likely category, set confidence low, and explain the uncertainty in one sentence.
+
+You MUST respond by calling the record_classification tool. Never reply with plain text."""
 
 TOOL_SCHEMA = {
     "name": "record_classification",
@@ -57,7 +59,9 @@ TOOL_SCHEMA = {
             },
         },
         "required": ["category", "confidence", "reason"],
+        "additionalProperties": False,
     },
+    "strict": True,
 }
 
 
@@ -86,10 +90,10 @@ def classify_line(
     def _call() -> anthropic.types.Message:
         return client.messages.create(
             model=model,
-            max_tokens=256,
+            max_tokens=2048,
             system=SYSTEM_PROMPT,
             tools=[TOOL_SCHEMA],
-            tool_choice={"type": "tool", "name": "record_classification"},
+            tool_choice={"type": "auto"},
             messages=[{"role": "user", "content": user_message}],
         )
 
