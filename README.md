@@ -78,7 +78,7 @@ python run_batch.py --model haiku    # or --model sonnet
 
 ## Results
 
-Scored on this test set: 74 synthetic PO lines, confidence threshold 75%.
+Scored on this test set: 74 synthetic PO lines, confidence threshold 75%. These figures come from the saved batch runs in `results/`, not from a live run in the app.
 
 |                       | Haiku            | Sonnet           |
 |-----------------------|------------------|------------------|
@@ -87,9 +87,9 @@ Scored on this test set: 74 synthetic PO lines, confidence threshold 75%.
 | Avg sec / line        | 1.68 s           | 2.23 s           |
 | Lines sent to review  | 12               | 15               |
 
-Both models missed one line each, but different lines — the two most ambiguous in the dataset. On the Haiku run, all 62 lines above the threshold were correct and both errors fell within the 12 flagged for review, meaning the confidence score was a reliable signal: a reviewer catching either miss needed to look at only 12 lines rather than all 74.
+Both models missed one line each, and the misses were different lines: PO-1074 for Haiku and PO-1050 for Sonnet. The answer key flags both as ambiguous. On the Haiku run, all 62 lines above the threshold were correct, and its one error fell within the 12 flagged for review. The confidence score was a useful signal here: a reviewer needed to look at only 12 lines rather than all 74.
 
-Haiku delivers the same accuracy at roughly 1/19th the cost and somewhat lower latency. For a task like spend classification, where the categories are well-defined and a review queue handles edge cases, Haiku is the practical choice.
+Haiku delivers the same accuracy at about 18 times lower cost and somewhat lower latency. For a task like spend classification, where the categories are well-defined and a review queue handles edge cases, Haiku is the practical choice.
 
 ---
 
