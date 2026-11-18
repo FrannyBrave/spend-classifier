@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
@@ -9,7 +11,71 @@ from config import (
     SONNET_INPUT_PRICE_PER_M, SONNET_OUTPUT_PRICE_PER_M,
 )
 
+# Resolve data paths relative to this file so the app works from any directory.
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+RESULTS_DIR = BASE_DIR / "results"
+SAMPLE_PATH = DATA_DIR / "sample_po_lines.csv"
+ANSWER_KEY_PATH = DATA_DIR / "answer_key.csv"
+
+# Guards for public deployments (they spend the owner's API credits):
+#   SPEND_CLASSIFIER_MAX_ROWS     max rows accepted from an uploaded CSV (default 100)
+#   SPEND_CLASSIFIER_DISABLE_LIVE set to 1 to disable live API calls entirely
+try:
+    MAX_UPLOAD_ROWS = int(os.getenv("SPEND_CLASSIFIER_MAX_ROWS", "100"))
+except ValueError:
+    MAX_UPLOAD_ROWS = 100
+LIVE_DISABLED = os.getenv("SPEND_CLASSIFIER_DISABLE_LIVE", "").strip() == "1"
+
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
 st.set_page_config(page_title="Spend Classifier", layout="wide")
+
+
+def _short(value, n: int) -> str:
+    """First n characters of a cell as text; blank/NaN cells become ''."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value)[:n]
+
+
+def _coerce_amount(series: pd.Series) -> pd.Series:
+    """Parse amounts like '$1,200.50' to numbers; unreadable values become NaN."""
+    cleaned = series.astype(str).str.replace(r"[$,\s]", "", regex=True)
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
+def _money(value) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    return "n/a" if pd.isna(number) else f"${number:,.2f}"
+
+
+def _csv_safe(df: pd.DataFrame) -> pd.DataFrame:
+    """Neutralise spreadsheet formula injection in text cells of a download.
+
+    Text starting with = + - @ would run as a formula when opened in Excel or
+    Sheets, so it gets a leading apostrophe.
+    """
+    out = df.copy()
+    for col in out.columns:
+        if not pd.api.types.is_numeric_dtype(out[col]):
+            out[col] = out[col].map(
+                lambda v: "'" + v if isinstance(v, str) and v.startswith(_FORMULA_PREFIXES) else v
+            )
+    return out
+
+
+def _set_results(df: pd.DataFrame, label: str) -> None:
+    """Store new results and reset anything derived from the previous results."""
+    st.session_state["results"] = df
+    st.session_state["results_model"] = label
+    st.session_state["reviews"] = {}
+    for key in [k for k in st.session_state if str(k).startswith("sel_")]:
+        del st.session_state[key]
+
 
 st.info(
     "Demo with synthetic data. Not real company data.",
@@ -32,6 +98,7 @@ with tab_classify:
         uploaded = st.file_uploader(
             "Upload a CSV (supplier, description, amount_usd)",
             type="csv",
+            help=f"Up to {MAX_UPLOAD_ROWS} rows. Include a unique line_id column to use saved results.",
         )
 
     with col_model:
@@ -43,10 +110,14 @@ with tab_classify:
 
     # Load data: uploaded file or default sample
     if uploaded is not None:
-        df_input = pd.read_csv(uploaded)
+        try:
+            df_input = pd.read_csv(uploaded)
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError) as exc:
+            st.error(f"Could not read that CSV: {exc}")
+            st.stop()
         source_label = uploaded.name
     else:
-        df_input = pd.read_csv("data/sample_po_lines.csv")
+        df_input = pd.read_csv(SAMPLE_PATH)
         source_label = "data/sample_po_lines.csv (default)"
 
     required_cols = {"supplier", "description", "amount_usd"}
@@ -58,14 +129,44 @@ with tab_classify:
         st.error(f"CSV is missing required columns: {', '.join(sorted(missing))}")
         st.stop()
 
+    # Public-demo guard: uploads are what spend API credits.
+    if uploaded is not None and len(df_input) > MAX_UPLOAD_ROWS:
+        st.error(
+            f"Uploads are limited to {MAX_UPLOAD_ROWS} rows; this file has {len(df_input)}. "
+            "Trim the file and upload it again."
+        )
+        st.stop()
+
+    # Duplicate line_ids would collide in the review queue and in saved-result merges.
+    if "line_id" in df_input.columns:
+        dupes = df_input.loc[df_input["line_id"].duplicated(keep=False), "line_id"].astype(str).unique()
+        if len(dupes):
+            st.error(
+                "line_id values must be unique. Duplicates: "
+                + ", ".join(dupes[:5]) + (" …" if len(dupes) > 5 else "")
+            )
+            st.stop()
+
+    df_input = df_input.reset_index(drop=True)
+    df_input["amount_usd"] = _coerce_amount(df_input["amount_usd"])
+    n_bad_amount = int(df_input["amount_usd"].isna().sum())
+    if n_bad_amount:
+        st.warning(f"{n_bad_amount} row(s) have an unreadable amount; they will be classified with the amount shown as unknown.")
+
     btn_col1, btn_col2 = st.columns([2, 3])
-    run_clicked  = btn_col1.button("Run classification", type="primary")
+    run_clicked  = btn_col1.button(
+        "Run classification", type="primary", disabled=LIVE_DISABLED,
+        help="Live API calls are turned off in this deployment. Use 'Load saved results'." if LIVE_DISABLED else None,
+    )
     load_clicked = btn_col2.button("Load saved results", help="Loads the saved batch CSV for the selected model from results/")
 
     if load_clicked:
-        saved_path = f"results/{model_id.replace('/', '-')}.csv"
-        if not os.path.exists(saved_path):
-            st.error(f"No saved results found at `{saved_path}`. Run `python run_batch.py --model {'haiku' if model_id == HAIKU_MODEL else 'sonnet'}` first.")
+        saved_path = RESULTS_DIR / f"{model_id.replace('/', '-')}.csv"
+        shown_path = f"results/{saved_path.name}"
+        if not saved_path.exists():
+            st.error(f"No saved results found at `{shown_path}`. Run `python run_batch.py --model {'haiku' if model_id == HAIKU_MODEL else 'sonnet'}` first.")
+        elif "line_id" not in df_input.columns:
+            st.error("Saved results are matched by `line_id`, but this CSV has no `line_id` column. Remove the upload to use the sample data.")
         else:
             saved_df = pd.read_csv(saved_path)
             # Align column names with what the Classify tab produces
@@ -79,9 +180,14 @@ with tab_classify:
                 on="line_id", how="left",
             )
             saved_df["model"] = model_id
-            st.session_state["results"] = saved_df
-            st.session_state["results_model"] = model_label
-            st.success(f"Loaded {len(saved_df)} rows from `{saved_path}`.")
+            _set_results(saved_df, model_label)
+            st.success(f"Loaded {len(saved_df)} rows from `{shown_path}`.")
+            n_unmatched = int(saved_df["supplier"].isna().sum())
+            if n_unmatched:
+                st.warning(
+                    f"{n_unmatched} saved row(s) have no matching line_id in the loaded CSV, "
+                    "so their supplier and description are blank."
+                )
 
     if run_clicked:
         progress_bar = st.progress(0, text="Starting…")
@@ -92,14 +198,20 @@ with tab_classify:
             pct = i / total
             progress_bar.progress(
                 pct,
-                text=f"Classifying {i + 1}/{total} — {row['supplier'][:40]}",
+                text=f"Classifying {i + 1}/{total} — {_short(row['supplier'], 40)}",
             )
-            result = classify_line(
-                supplier=str(row["supplier"]),
-                description=str(row["description"]),
-                amount=row["amount_usd"],
-                model=model_id,
-            )
+            try:
+                # Raw cell values: classify_line handles blanks/NaN itself.
+                result = classify_line(
+                    supplier=row["supplier"],
+                    description=row["description"],
+                    amount=row["amount_usd"],
+                    model=model_id,
+                )
+            except RuntimeError as exc:  # e.g. ANTHROPIC_API_KEY not set
+                progress_bar.empty()
+                st.error(str(exc))
+                st.stop()
             rows.append({
                 "line_id":    row.get("line_id", f"row-{i+1}"),
                 "supplier":   row["supplier"],
@@ -115,9 +227,7 @@ with tab_classify:
             })
 
         progress_bar.progress(1.0, text="Done.")
-        results_df = pd.DataFrame(rows)
-        st.session_state["results"] = results_df
-        st.session_state["results_model"] = model_label
+        _set_results(pd.DataFrame(rows), model_label)
 
     # Show results table if we have data in session state
     if "results" in st.session_state:
@@ -144,7 +254,7 @@ with tab_classify:
 
         st.dataframe(
             display_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "line_id":     st.column_config.TextColumn("PO Line", width="small"),
@@ -165,7 +275,7 @@ with tab_classify:
             },
         )
 
-        csv_bytes = results_df.to_csv(index=False).encode()
+        csv_bytes = _csv_safe(results_df).to_csv(index=False).encode()
         st.download_button(
             "Download results CSV",
             data=csv_bytes,
@@ -242,12 +352,14 @@ with tab_review:
                             f"_{row['description']}_"
                         )
                     with h2:
-                        st.markdown(f"**${row['amount_usd']:,.2f}**")
+                        st.markdown(f"**{_money(row['amount_usd'])}**")
 
                     # AI prediction row
+                    is_err_row = row["category"] == "error"
                     conf_pct = int(round(row["confidence"] * 100))
                     conf_color = (
-                        "🟢" if row["confidence"] >= 0.75
+                        "⚠️" if is_err_row
+                        else "🟢" if row["confidence"] >= 0.75
                         else "🟡" if row["confidence"] >= 0.50
                         else "🔴"
                     )
@@ -270,7 +382,10 @@ with tab_review:
                         a1, a2, a3 = st.columns([1, 2, 3])
 
                         with a1:
-                            if st.button("Approve AI category", key=f"approve_{lid}"):
+                            if is_err_row:
+                                # There is no AI category to approve; a human must choose one.
+                                st.caption("Classification failed — choose a category →")
+                            elif st.button("Approve AI category", key=f"approve_{lid}"):
                                 reviews[lid] = {
                                     "final_category": row["category"],
                                     "human_reviewed": True,
@@ -308,7 +423,6 @@ with tab_review:
 with tab_results:
     st.header("Results")
 
-    ANSWER_KEY_PATH = "data/answer_key.csv"
     _MODEL_META = {
         HAIKU_MODEL:  ("Haiku",  HAIKU_INPUT_PRICE_PER_M,  HAIKU_OUTPUT_PRICE_PER_M),
         SONNET_MODEL: ("Sonnet", SONNET_INPUT_PRICE_PER_M, SONNET_OUTPUT_PRICE_PER_M),
@@ -328,10 +442,15 @@ with tab_results:
         merged = results_df.merge(answer_key[["line_id", "correct_category"]], on="line_id", how="inner")
 
         # Attach final (post-review) category
-        merged["final_category"] = merged.apply(
-            lambda r: reviews.get(r["line_id"], {}).get("final_category", r["category"]),
-            axis=1,
-        )
+        # Only an actual human decision overrides the AI's category; unreviewed
+        # lines always use the current results, never a stale stored value.
+        def _final_category(r):
+            review = reviews.get(r["line_id"])
+            if review and review.get("human_reviewed"):
+                return review["final_category"]
+            return r["category"]
+
+        merged["final_category"] = merged.apply(_final_category, axis=1)
 
         # Score only non-error rows
         scored = merged[merged["category"] != "error"].copy()
@@ -375,7 +494,7 @@ with tab_results:
             _band_row(f"Above {threshold:.0%}", above),
             _band_row(f"Below {threshold:.0%}", below),
         ])
-        st.dataframe(band_df, hide_index=True, use_container_width=True)
+        st.dataframe(band_df, hide_index=True, width="stretch")
 
         # ── 3. Confusion matrix ───────────────────────────────────────────────
         st.subheader("Confusion matrix — AI predictions")
@@ -423,9 +542,9 @@ with tab_results:
 
         model_slug = {m: m.replace("/", "-") for m in _MODEL_META}
         saved = {
-            m: pd.read_csv(f"results/{model_slug[m]}.csv")
+            m: pd.read_csv(RESULTS_DIR / f"{model_slug[m]}.csv")
             for m in _MODEL_META
-            if os.path.exists(f"results/{model_slug[m]}.csv")
+            if (RESULTS_DIR / f"{model_slug[m]}.csv").exists()
         }
 
         if len(saved) < 2:
