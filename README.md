@@ -74,6 +74,16 @@ streamlit run app.py
 python run_batch.py --model haiku    # or --model sonnet
 ```
 
+The batch scorer will not overwrite a saved results file if more than 10% of rows errored (for example during an API outage); pass `--force` to override. It exits with code 1 when a run fails.
+
+## Deploying publicly
+
+Live classification spends the API credits of whoever owns the key, so for a public demo:
+
+- `SPEND_CLASSIFIER_DISABLE_LIVE=1` turns off the "Run classification" button, leaving the saved-results demo.
+- `SPEND_CLASSIFIER_MAX_ROWS=100` (the default) caps the rows accepted from an uploaded CSV.
+- Set a monthly spend limit on the key in the Anthropic Console.
+
 ---
 
 ## Results
