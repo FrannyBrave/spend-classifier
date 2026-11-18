@@ -1,9 +1,16 @@
+import logging
+import math
 import time
-import json
+from pathlib import Path
+
 import pandas as pd
 import anthropic
 
-from config import ANTHROPIC_API_KEY, HAIKU_MODEL, SONNET_MODEL
+from config import ANTHROPIC_API_KEY, HAIKU_MODEL
+
+logger = logging.getLogger(__name__)
+
+MAX_FIELD_CHARS = 500  # cap per-field length so one huge cell can't inflate cost
 
 CATEGORIES = [
     "Direct Materials",
@@ -65,6 +72,68 @@ TOOL_SCHEMA = {
 }
 
 
+TOOL_NAME = TOOL_SCHEMA["name"]
+
+_client = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    """Shared client. The SDK retries 429/5xx/connection errors with backoff;
+    non-retryable errors (401, 400, 404) fail immediately."""
+    global _client
+    if _client is None:
+        if not ANTHROPIC_API_KEY:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not set. Add it to your .env file "
+                "(see config.py) and restart."
+            )
+        _client = anthropic.Anthropic(
+            api_key=ANTHROPIC_API_KEY, max_retries=3, timeout=60.0
+        )
+    return _client
+
+
+def _error_row(reason: str, start: float, response=None) -> dict:
+    usage = getattr(response, "usage", None)
+    return {
+        "category": "error",
+        "confidence": 0.0,
+        "reason": reason,
+        "input_tokens": usage.input_tokens if usage else 0,
+        "output_tokens": usage.output_tokens if usage else 0,
+        "latency_seconds": round(time.perf_counter() - start, 3),
+    }
+
+
+def _clean_text(value) -> str:
+    """Make a CSV cell safe to embed in the prompt.
+
+    Blank/NaN cells become an explicit placeholder (not the string "nan"), and
+    whitespace/newlines are collapsed so a cell can't imitate the
+    "Supplier:/Description:/Amount:" structure. Length is capped.
+    """
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return "(not provided)"
+    text = " ".join(str(value).split())
+    if not text:
+        return "(not provided)"
+    if len(text) > MAX_FIELD_CHARS:
+        text = text[:MAX_FIELD_CHARS] + "… [truncated]"
+    return text
+
+
+def _format_amount(amount) -> str:
+    try:
+        value = float(amount)
+    except (TypeError, ValueError):
+        return "unknown"
+    if math.isnan(value) or math.isinf(value):
+        return "unknown"
+    if value < 0:
+        return f"{value:,.2f} (negative: likely a credit or refund)"
+    return f"{value:,.2f}"
+
+
 def classify_line(
     supplier: str,
     description: str,
@@ -76,64 +145,73 @@ def classify_line(
 
     Returns a dict with keys:
         category, confidence, reason, input_tokens, output_tokens, latency_seconds
-    On error (after one retry) returns:
-        category="error", confidence=0.0, reason=<error message>, tokens=0, latency=0.0
+    On error returns:
+        category="error", confidence=0.0, reason=<error message>, with token counts
+        if a response was received (else 0) and elapsed latency.
+    latency_seconds is total wall time for the call, including any SDK retries.
+    Retries (429/5xx/connection errors) are handled by the SDK client with backoff.
     """
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
     user_message = (
-        f"Supplier: {supplier}\n"
-        f"Description: {description}\n"
-        f"Amount (USD): {amount}"
+        f"Supplier: {_clean_text(supplier)}\n"
+        f"Description: {_clean_text(description)}\n"
+        f"Amount (USD): {_format_amount(amount)}"
     )
 
-    def _call() -> anthropic.types.Message:
-        return client.messages.create(
+    start = time.perf_counter()
+    try:
+        response = _get_client().messages.create(
             model=model,
             max_tokens=2048,
             system=SYSTEM_PROMPT,
             tools=[TOOL_SCHEMA],
-            tool_choice={"type": "auto"},
+            # Force the tool call so the model can't answer in plain text.
+            tool_choice={"type": "tool", "name": TOOL_NAME},
             messages=[{"role": "user", "content": user_message}],
         )
-
-    start = time.perf_counter()
-    try:
-        response = _call()
-    except anthropic.APIError:
-        time.sleep(2)
-        try:
-            response = _call()
-        except anthropic.APIError as e:
-            return {
-                "category": "error",
-                "confidence": 0.0,
-                "reason": str(e),
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "latency_seconds": round(time.perf_counter() - start, 3),
-            }
+    except anthropic.AnthropicError as e:
+        # Full detail goes to the log only; the row (shown in the UI and saved to
+        # results) gets a short, sanitized message with no request IDs or account text.
+        logger.warning("Anthropic API call failed: %s", e)
+        status = getattr(e, "status_code", None)
+        label = f"{type(e).__name__}, HTTP {status}" if status else type(e).__name__
+        return _error_row(f"API error ({label}). See logs for details.", start)
     latency = round(time.perf_counter() - start, 3)
 
-    # Extract tool-use result
+    def _fail(reason: str) -> dict:
+        row = _error_row(reason, start, response)
+        row["latency_seconds"] = latency
+        return row
+
+    if response.stop_reason == "max_tokens":
+        return _fail("Response was truncated (max_tokens).")
+
     tool_block = next(
         (b for b in response.content if b.type == "tool_use"), None
     )
     if tool_block is None:
-        return {
-            "category": "error",
-            "confidence": 0.0,
-            "reason": "Model did not invoke the classification tool.",
-            "input_tokens": response.usage.input_tokens,
-            "output_tokens": response.usage.output_tokens,
-            "latency_seconds": latency,
-        }
+        return _fail(
+            f"Model did not invoke the classification tool "
+            f"(stop_reason={response.stop_reason})."
+        )
 
     result = tool_block.input
+    try:
+        category = result["category"]
+        reason = str(result["reason"])
+        confidence = float(result["confidence"])
+    except (KeyError, TypeError, ValueError):
+        return _fail("Tool output was missing or malformed.")
+
+    if category not in CATEGORIES:
+        return _fail(f"Model returned an unknown category: {category!r}.")
+    if confidence != confidence:  # NaN
+        return _fail("Model returned a non-numeric confidence.")
+    confidence = min(1.0, max(0.0, confidence))  # schema can't enforce the range
+
     return {
-        "category": result["category"],
-        "confidence": result["confidence"],
-        "reason": result["reason"],
+        "category": category,
+        "confidence": confidence,
+        "reason": reason,
         "input_tokens": response.usage.input_tokens,
         "output_tokens": response.usage.output_tokens,
         "latency_seconds": latency,
@@ -141,13 +219,14 @@ def classify_line(
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("data/sample_po_lines.csv")
+    # Resolve relative to this file so it works from any working directory.
+    df = pd.read_csv(Path(__file__).resolve().parent / "data" / "sample_po_lines.csv")
     sample = df.head(3)
 
-    print(f"{'PO':<10} {'Supplier':<30} {'Description':<50} {'Category':<22} {'Conf':>5}  {'Reason'}")
+    print(f"{'Line':<10} {'Supplier':<30} {'Description':<50} {'Category':<22} {'Conf':>5}  {'Reason'}")
     print("-" * 150)
 
-    for _, row in sample.iterrows():
+    for idx, row in sample.iterrows():
         result = classify_line(
             supplier=row["supplier"],
             description=row["description"],
@@ -155,8 +234,8 @@ if __name__ == "__main__":
             model=HAIKU_MODEL,
         )
         print(
-            f"{row['line_id']:<10} "
-            f"{row['supplier']:<30} "
+            f"{str(row.get('line_id', idx)):<10} "
+            f"{str(row['supplier']):<30} "
             f"{str(row['description']):<50} "
             f"{result['category']:<22} "
             f"{result['confidence']:>5.2f}  "
