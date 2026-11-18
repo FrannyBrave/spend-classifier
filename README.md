@@ -41,7 +41,7 @@ spend-classifier/
 │   ├── sample_po_lines.csv   # 74 synthetic PO lines
 │   ├── answer_key.csv        # Correct categories for scoring
 │   └── categories.md         # Category definitions and tie-breaker rules
-└── results/            # Output CSVs from run_batch.py (git-ignored)
+└── results/            # Saved batch-run CSVs from run_batch.py (committed)
 ```
 
 ---
